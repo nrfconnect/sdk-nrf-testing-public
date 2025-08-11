@@ -1,0 +1,95 @@
+name: Twister nightly multiplatform
+
+on:
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - main
+#      - v*-branch
+  pull_request:
+    branches:
+      - main
+      - v*-branch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  twister-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [linux]
+        subset: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+        include:
+           - os: linux
+             runner: '["runner=16cpu-linux-x64/runs-on=${{ github.run_id }}/volume=250gb"]'
+#           - os: windows
+#             runner: '["windows-2022"]'
+#           - os: macos
+#             runner: '["macos-15"]'
+
+
+    runs-on: ${{ fromJson(matrix.runner) }}
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: 3.12
+
+      - name: Checkout sources
+        uses: nrfconnect/action-checkout-west-update@main
+        with:
+          git-fetch-depth: 0
+
+      - name: Setup ncs toolchain
+        uses: nrfconnect/action-ncs-toolchain-setup@main
+
+      - name: Run twister
+        working-directory: ncs
+        shell: bash
+        run: |
+          nrf/scripts/ci/twister_runner.sh tb ${{ matrix.subset }}/20
+
+#        run: |
+#          TOOLCHAIN_BUNDLE_ID=$(./nrf/scripts/print_toolchain_checksum.sh)
+#          ZEPHYR_BASE=${{ github.workspace }}/ncs/zephyr
+#          if [ "${{ runner.os }}" = "macOS" ]; then
+#            EXTRA_TWISTER_FLAGS="--quarantine-list nrf/scripts/quarantine_windows_mac.yaml"
+#            NRFUTIL="sudo ../nrfutil sdk-manager toolchain launch --toolchain-bundle-id $TOOLCHAIN_BUNDLE_ID -- python zephyr/scripts/twister "
+#          elif [ "${{ runner.os }}" = "Windows" ]; then
+#            export PYTHONUTF8=1
+#            EXTRA_TWISTER_FLAGS="--short-build-path --quarantine-list nrf\scripts\quarantine_windows_mac.yaml --no-detailed-test-id"
+#            NRFUTIL="../nrfutil.exe sdk-manager toolchain launch --toolchain-bundle-id $TOOLCHAIN_BUNDLE_ID -- python zephyr/scripts/twister"
+#          else
+#            EXTRA_TWISTER_FLAGS=""
+#            NRFUTIL="../nrfutil sdk-manager toolchain launch --toolchain-bundle-id $TOOLCHAIN_BUNDLE_ID -- python zephyr/scripts/twister"
+#            sudo apt-get install gcc-multilib
+#          fi
+#          $NRFUTIL --ninja --inline-logs --verbose --overflow-as-errors --integration \
+#          --retry-build-errors --quarantine-list nrf/scripts/quarantine.yaml \
+#          --quarantine-list nrf/scripts/quarantine_integration.yaml \
+#          --subset ${{ matrix.subset }}/40 --outdir twister_build --report-dir results_samples -T nrf/samples -T nrf/applications \
+#          -v $EXTRA_TWISTER_FLAGS
+
+
+      - name: Upload twister
+        if: always()
+        id: artifact-upload-step
+        uses: actions/upload-artifact@v4
+        with:
+          name: Twister results dir ${{ runner.os }} ${{matrix.subset}}
+          if-no-files-found: ignore
+          include-hidden-files: false
+          retention-days: 7
+          path: |
+            ncs/results_samples/**/*
+            !ncs/twister_build/**/build.ninja*
+            ncs/tb/**/*.hex
+            ncs/tb/**/build.log
+
+
