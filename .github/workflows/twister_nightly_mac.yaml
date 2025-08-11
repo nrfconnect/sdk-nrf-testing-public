@@ -1,0 +1,101 @@
+name: Twister nightly mac
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  twister-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos]
+        subset: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+        include:
+           - os: macos
+             runner: '["macos-15"]'
+
+
+    runs-on: ${{ fromJson(matrix.runner) }}
+    steps:
+      - name: Checkout sources
+        uses: nrfconnect/action-checkout-west-update@main
+        with:
+          git-fetch-depth: 0
+
+      - name: west group filter
+        working-directory: ncs
+        run: |
+          west config manifest.group-filter +bsec
+          west update --narrow
+
+      - name: Setup ncs toolchain
+        uses: nrfconnect/action-ncs-toolchain-setup@main
+
+      - name: Run twister
+        working-directory: ncs
+        shell: bash
+        run: |
+          nrf/scripts/ci/twister_runner.sh tb ${{ matrix.subset }}/20
+
+      - name: Upload twister
+        if: always()
+        id: artifact-upload-step
+        uses: actions/upload-artifact@v4
+        with:
+          name: Twister results dir ${{ runner.os }} ${{matrix.subset}}
+          if-no-files-found: ignore
+          include-hidden-files: false
+          retention-days: 1
+          path: |
+            ncs/results_samples/**/*
+            !ncs/twister_build/**/build.ninja*
+            ncs/tb/**/*.hex
+            ncs/tb/**/*.log
+
+  artifact-combination:
+    needs: twister-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all twister artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Twister results dir *
+          path: artifacts
+          merge-multiple: true
+      - name: Combine all artifacts into one tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p combined/twister_build combined/results_samples
+
+          # Merge all results_samples directories into one
+          find artifacts -type d -path '*/ncs/results_samples' -print0 | while IFS= read -r -d '' dir; do
+            rsync -a "$dir"/ combined/results_samples/
+          done
+
+          # Extract all twister_build tarballs, merging into one twister_build dir
+          find artifacts -type f -path '*/upload/twister-results-*.tar.gz' -print0 | while IFS= read -r -d '' tarfile; do
+            # Tar contains ncs/twister_build; strip the leading 'ncs' so we get combined/twister_build/...
+            tar -xzf "$tarfile" -C combined --strip-components=1
+          done
+
+          # Create a single compressed archive containing combined results and builds
+          tar -czf twister-combined-artifacts.tar.gz -C combined .
+
+      - name: Upload combined twister artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Twister combined results
+          retention-days: 7
+          path: twister-combined-artifacts.tar.gz
