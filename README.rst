@@ -5,7 +5,7 @@ nRF Connect SDK: sdk-nrf
    :local:
    :depth: 2
 
-This repository contains the core of nRF Connect SDK, including subsystems,
+This repository contains the core of nRF Connect SDK, including sub systems,
 libraries, samples, and applications.
 It is also the SDK's west manifest repository, containing the nRF Connect SDK
 manifest (west.yml).
