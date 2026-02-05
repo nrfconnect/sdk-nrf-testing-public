@@ -30,7 +30,7 @@ jobs:
         working-directory: ncs/nrf
         run: |
           pip3 install west
-          pip3 install reqs.txt
+          pip3 install -r reqs.txt
           git config --global user.email "you@example.com"
           git config --global user.name "Your Name"
           west init -l . || true
