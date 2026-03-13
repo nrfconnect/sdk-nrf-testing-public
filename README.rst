@@ -1,3 +1,5 @@
+**Last updated:** Fri Mar 13 03:12:55 PM UTC 2026
+
 nRF Connect SDK: sdk-nrf
 ########################
 
