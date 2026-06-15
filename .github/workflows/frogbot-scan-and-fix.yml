@@ -1,4 +1,4 @@
-name: Frogbot Scan Repository
+name: Frogbot Scan and Fix
 
 on:
   workflow_dispatch:
@@ -11,13 +11,22 @@ permissions:
   security-events: write
 
 jobs:
-  scan-repository:
+  create-fix-pull-requests:
     runs-on: ubuntu-24.04
-    name: Scan Repository (${{ matrix.branch }} branch)
+    name: Scan and Fix (${{ matrix.branch }} branch)
     strategy:
       matrix:
         branch: [main]
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: lts/*
+
       - uses: jfrog/frogbot@v3.2.1
         env:
           JF_URL: ${{ secrets.FROGBOT_URL }}
