@@ -1,0 +1,42 @@
+name: Frogbot Test Target
+
+# Intentionally insecure test workflow for Frogbot validation.
+# Do not merge: combines pull_request_target with untrusted PR checkout and write perms.
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+    paths:
+      - '.github/workflows/frogbot-test-target.yml'
+      - 'scripts/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  run-untrusted-pr-code:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Execute code from PR branch with elevated token
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -c "import pathlib; print(pathlib.Path('scripts/requirements-base.txt').read_text())"
+
+      - name: Comment on PR using injected title
+        uses: actions/github-script@ed597411d8f924073a0cc12d17af83b5c4f21cc7 # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `${{ github.event.pull_request.title }}`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Frogbot test target workflow ran for: ${title}`
+            });
