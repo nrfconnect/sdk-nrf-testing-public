@@ -6,15 +6,13 @@ on:
 permissions:
   contents: read
 
-env:
-  RUNNER_TEMP: ${{ runner.temp }}
-  PHASE_LOG: ${{ runner.temp }}/phase-timestamps.log
-  STRESS_IO_DIR: ${{ github.workspace }}/.stress-io
-
 jobs:
   resource-demo:
     runs-on: ubuntu-24.04
     name: CPU / RAM / disk stress with sar monitoring
+    env:
+      PHASE_LOG: ${{ runner.temp }}/phase-timestamps.log
+      STRESS_IO_DIR: ${{ github.workspace }}/.stress-io
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
