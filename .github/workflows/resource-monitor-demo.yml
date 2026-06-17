@@ -1,0 +1,71 @@
+name: Resource Monitor Demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUNNER_TEMP: ${{ runner.temp }}
+  PHASE_LOG: ${{ runner.temp }}/phase-timestamps.log
+  STRESS_IO_DIR: ${{ github.workspace }}/.stress-io
+
+jobs:
+  resource-demo:
+    runs-on: ubuntu-24.04
+    name: CPU / RAM / disk stress with sar monitoring
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install monitoring and stress tools
+        run: sudo apt-get update && sudo apt-get install -y sysstat stress-ng fio
+
+      - name: Record runner capacity
+        run: echo "NPROC=$(nproc)" >> "$GITHUB_ENV"
+
+      - name: Start resource monitor
+        run: |
+          chmod +x scripts/ci/resource-monitor.sh
+          ./scripts/ci/resource-monitor.sh start
+
+      - name: Phase 1 — CPU stress
+        run: |
+          echo "cpu,$(date +%s)" >> "$PHASE_LOG"
+          chmod +x scripts/ci/stress-demo.sh
+          ./scripts/ci/stress-demo.sh cpu
+
+      - name: Phase 2 — RAM stress
+        run: |
+          echo "memory,$(date +%s)" >> "$PHASE_LOG"
+          ./scripts/ci/stress-demo.sh memory
+
+      - name: Phase 3 — Disk IO stress
+        run: |
+          echo "disk,$(date +%s)" >> "$PHASE_LOG"
+          ./scripts/ci/stress-demo.sh disk
+
+      - name: Stop monitor and analyze bottlenecks
+        if: always()
+        run: |
+          echo "end,$(date +%s)" >> "$PHASE_LOG"
+          chmod +x scripts/ci/resource-monitor.sh scripts/ci/analyze-sar.sh
+          ./scripts/ci/resource-monitor.sh stop
+          ./scripts/ci/analyze-sar.sh
+
+      - name: Clean up stress files
+        if: always()
+        run: rm -rf "$STRESS_IO_DIR"
+
+      - name: Upload resource monitor artifact
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        with:
+          name: resource-monitor
+          path: |
+            ${{ runner.temp }}/sar.dat
+            ${{ runner.temp }}/sar-reports/
+            ${{ runner.temp }}/bottleneck-summary.txt
+            ${{ runner.temp }}/phase-timestamps.log
+          if-no-files-found: warn
