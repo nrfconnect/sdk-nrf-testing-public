@@ -10,12 +10,14 @@ jobs:
   resource-demo:
     runs-on: ubuntu-24.04
     name: CPU / RAM / disk stress with sar monitoring
-    env:
-      PHASE_LOG: ${{ runner.temp }}/phase-timestamps.log
-      STRESS_IO_DIR: ${{ github.workspace }}/.stress-io
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set job paths
+        run: |
+          echo "PHASE_LOG=${RUNNER_TEMP}/phase-timestamps.log" >> "$GITHUB_ENV"
+          echo "STRESS_IO_DIR=${GITHUB_WORKSPACE}/.stress-io" >> "$GITHUB_ENV"
 
       - name: Install monitoring and stress tools
         run: sudo apt-get update && sudo apt-get install -y sysstat stress-ng fio
