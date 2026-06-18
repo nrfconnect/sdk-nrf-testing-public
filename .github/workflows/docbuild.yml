@@ -33,6 +33,7 @@ jobs:
       - volume=120gb
       - family=c6id+m6id+r6id
       - ram=${{ github.event_name == 'pull_request' && '32+128' || '64+128' }}
+      - ssh=true
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
