@@ -1,0 +1,48 @@
+name: Resource monitor setup
+description: Install sysstat, set paths, and start background sar sampling.
+
+inputs:
+  sar_interval:
+    description: Seconds between sar samples
+    required: false
+    default: "10"
+  extra_packages:
+    description: Space-separated apt packages to install alongside sysstat
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set monitor paths
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "PHASE_LOG=${RUNNER_TEMP}/phase-timestamps.log" >> "$GITHUB_ENV"
+        echo "SAR_DAT=${RUNNER_TEMP}/sar.dat" >> "$GITHUB_ENV"
+        echo "SAR_REPORTS_DIR=${RUNNER_TEMP}/sar-reports" >> "$GITHUB_ENV"
+        echo "SAR_INTERVAL=${{ inputs.sar_interval }}" >> "$GITHUB_ENV"
+        echo "SUMMARY_FILE=${RUNNER_TEMP}/bottleneck-summary.txt" >> "$GITHUB_ENV"
+        echo "NPROC=$(nproc)" >> "$GITHUB_ENV"
+        cp "${{ github.action_path }}/resource-monitor-env.sh" "${RUNNER_TEMP}/resource-monitor-env.sh"
+        echo "BASH_ENV=${RUNNER_TEMP}/resource-monitor-env.sh" >> "$GITHUB_ENV"
+
+    - name: Install sysstat
+      shell: bash
+      run: |
+        set -euo pipefail
+        packages=(sysstat)
+        if [[ -n "${{ inputs.extra_packages }}" ]]; then
+          read -r -a extra <<< "${{ inputs.extra_packages }}"
+          packages+=("${extra[@]}")
+        fi
+        sudo apt-get update
+        sudo apt-get install -y "${packages[@]}"
+
+    - name: Start sar
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$(dirname "$SAR_DAT")"
+        sar -o "$SAR_DAT" "$SAR_INTERVAL" >/dev/null 2>&1 &
+        echo "SAR_PID=$!" >> "$GITHUB_ENV"

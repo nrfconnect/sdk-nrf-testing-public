@@ -1,0 +1,85 @@
+# Reusable job: wrap any shell script with sar profiling.
+#
+# Mark each logical step inside profile_script with resource_monitor_mark:
+#
+#   jobs:
+#     build:
+#       uses: ./.github/workflows/resource-monitor-profile-job.yml
+#       with:
+#         profile_script: |
+#           resource_monitor_mark "west update"
+#           west update
+#           resource_monitor_mark "west build"
+#           west build -b nrf52840dk_nrf52840 samples/hello_world
+#
+# Teardown prints peak CPU/RAM/DISK % per marked step, e.g.:
+#   CPU:80%. RAM:50%. DISK:99%.
+#
+# Or paste setup/teardown into an existing job (same runner, between your steps):
+#
+#   steps:
+#     - uses: actions/checkout@v4
+#     - uses: ./.github/actions/resource-monitor-setup
+#     - run: |
+#         resource_monitor_mark "compile"
+#         make -j"$(nproc)"
+#     - uses: ./.github/actions/resource-monitor-teardown
+#       if: always()
+#
+name: Resource monitor profile job
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner label
+        required: false
+        type: string
+        default: ubuntu-24.04
+      sar_interval:
+        description: Seconds between sar samples
+        required: false
+        type: string
+        default: "10"
+      profile_script:
+        description: Bash script to run while sar samples; use resource_monitor_mark before each step
+        required: true
+        type: string
+      artifact_name:
+        description: Uploaded artifact name
+        required: false
+        type: string
+        default: resource-monitor
+      extra_packages:
+        description: Extra apt packages for the profiled command (space-separated)
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Resource monitor setup
+        uses: ./.github/actions/resource-monitor-setup
+        with:
+          sar_interval: ${{ inputs.sar_interval }}
+          extra_packages: ${{ inputs.extra_packages }}
+
+      - name: Profiled work
+        shell: bash
+        run: |
+          set -euo pipefail
+          ${{ inputs.profile_script }}
+
+      - name: Resource monitor teardown
+        if: always()
+        uses: ./.github/actions/resource-monitor-teardown
+        with:
+          artifact_name: ${{ inputs.artifact_name }}

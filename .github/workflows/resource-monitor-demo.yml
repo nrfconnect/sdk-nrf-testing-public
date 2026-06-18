@@ -1,0 +1,59 @@
+# Demo workflow exercising CPU / RAM / disk stress under sar profiling.
+#
+# To profile your own job, use resource-monitor-profile-job.yml or paste setup/teardown
+# into an existing job and call resource_monitor_mark before each command.
+#
+name: Resource Monitor Demo
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      stress_duration:
+        description: Seconds per demo stress phase
+        default: "45"
+
+permissions:
+  contents: read
+
+env:
+  STRESS_DURATION: ${{ github.event.inputs.stress_duration || '45' }}
+
+jobs:
+  resource-demo:
+    runs-on: ubuntu-24.04
+    name: CPU / RAM / DISK stress with sar monitoring
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Resource monitor setup
+        uses: ./.github/actions/resource-monitor-setup
+        with:
+          extra_packages: stress-ng fio
+
+      - name: Demo stress phases
+        shell: bash
+        run: |
+          set -euo pipefail
+          STRESS_IO_DIR="${GITHUB_WORKSPACE}/.stress-io"
+          STRESS_DURATION="${STRESS_DURATION}"
+
+          resource_monitor_mark "cpu"
+          stress-ng --cpu "$(nproc)" --cpu-method all --timeout "${STRESS_DURATION}s"
+
+          resource_monitor_mark "memory"
+          stress-ng --vm 2 --vm-bytes 75% --vm-keep --timeout "${STRESS_DURATION}s"
+
+          resource_monitor_mark "disk"
+          mkdir -p "$STRESS_IO_DIR"
+          fio --name=demo-randwrite \
+            --directory="$STRESS_IO_DIR" \
+            --ioengine=libaio --direct=1 --rw=randwrite --bs=4k \
+            --numjobs=4 --iodepth=32 --size=2G \
+            --runtime="${STRESS_DURATION}" --time_based --group_reporting \
+            --filename_format='fio.$jobnum'
+
+      - name: Resource monitor teardown
+        if: always()
+        uses: ./.github/actions/resource-monitor-teardown

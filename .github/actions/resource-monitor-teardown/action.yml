@@ -1,0 +1,49 @@
+name: Resource monitor teardown
+description: Stop sar, summarize utilization, and upload profile artifact.
+
+inputs:
+  artifact_name:
+    description: Name of the uploaded artifact
+    required: false
+    default: resource-monitor
+  upload_artifact:
+    description: Upload sar data and reports as a workflow artifact
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Stop sar and analyze
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "end,$(date +%s)" >> "$PHASE_LOG"
+
+        if [[ -n "${SAR_PID:-}" ]]; then
+          kill "$SAR_PID" 2>/dev/null || true
+          wait "$SAR_PID" 2>/dev/null || true
+        fi
+
+        if [[ -f "${SAR_DAT:-}" ]]; then
+          mkdir -p "$SAR_REPORTS_DIR"
+          sar -u -f "$SAR_DAT" > "$SAR_REPORTS_DIR/cpu.txt" 2>/dev/null || true
+          sar -r -f "$SAR_DAT" > "$SAR_REPORTS_DIR/memory.txt" 2>/dev/null || true
+          sar -d -p -f "$SAR_DAT" > "$SAR_REPORTS_DIR/disk.txt" 2>/dev/null || true
+          sar -q -f "$SAR_DAT" > "$SAR_REPORTS_DIR/queue.txt" 2>/dev/null || true
+          sar -W -f "$SAR_DAT" > "$SAR_REPORTS_DIR/swap.txt" 2>/dev/null || true
+        fi
+
+        bash "$GITHUB_ACTION_PATH/analyze.sh"
+
+    - name: Upload profile artifact
+      if: inputs.upload_artifact == 'true'
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: |
+          ${{ runner.temp }}/sar.dat
+          ${{ runner.temp }}/sar-reports/
+          ${{ runner.temp }}/bottleneck-summary.txt
+          ${{ runner.temp }}/phase-timestamps.log
+        if-no-files-found: warn
