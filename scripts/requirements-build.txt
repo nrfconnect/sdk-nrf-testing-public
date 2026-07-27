@@ -4,11 +4,11 @@ click>=8.2.0
 ecdsa
 grpcio-tools
 construct>=2.10.70
-cryptography>=46.0.1
+cryptography>=48.0.1
 imagesize>=1.2.0
 intelhex
 pylint
-setuptools>=80.8.0
+setuptools>=83.0.0
 zcbor~=0.8.0
 nrf-regtool==9.2.1
 windows-curses; sys_platform == 'win32'
