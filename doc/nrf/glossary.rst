@@ -20,7 +20,7 @@ Glossary
 
    AHB Access Port (AHB-AP)
       An Arm Coresight component that allows a debug probe to access CPU cores for programming and debugging.
-      Access through the AHB-AP can be blocked with :term:`Access port protection mechanism (AP-Protect)`.asdf
+      Access through the AHB-AP can be blocked with :term:`Access port protection mechanism (AP-Protect)`.asdfasdf
 
    Almanac data
       In the :term:`Global Navigation Satellite System (GNSS)`, the data providing coarse orbit and status information for each satellite in the constellation.
