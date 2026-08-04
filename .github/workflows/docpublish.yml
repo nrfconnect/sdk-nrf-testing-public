@@ -18,6 +18,7 @@ jobs:
       - name: Publish
         uses: andu-nordic/action-docpublish@main
         with:
+          doc-subdir: "addons/addon-serial_modem"
           storage-url: ${{ vars.NCS_DOC_PR_STORAGE_URL }}
           storage-url-pr: ${{ vars.NCS_DOC_PR_STORAGE_URL }}
           storage-sas: ${{ secrets.NCS_DOC_SAS_PRS }}
