@@ -16,7 +16,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Publish
-        uses: andu-nordic/action-docpublish@main
+        uses: andu-nordic/action-docpublish@feat/fix-comment
         with:
           storage-url: ${{ vars.NCS_DOC_PR_STORAGE_URL }}
           storage-url-pr: ${{ vars.NCS_DOC_PR_STORAGE_URL }}
