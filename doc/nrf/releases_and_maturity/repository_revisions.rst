@@ -1,5 +1,7 @@
 .. _repos_and_revs:
 
+test
+
 |NCS| repository revisions
 ##########################
 
