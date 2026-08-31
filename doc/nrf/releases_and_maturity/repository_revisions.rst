@@ -1,10 +1,9 @@
 .. _repos_and_revs:
 
-test
-
 |NCS| repository revisions
 ##########################
 
+test
 The following table lists all the repositories (and their respective revisions) that are included as part of |NCS| |version| release:
 
 .. manifest-revisions-table::
