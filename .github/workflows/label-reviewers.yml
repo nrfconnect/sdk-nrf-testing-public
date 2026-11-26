@@ -1,0 +1,33 @@
+name: Assign reviewers from labels
+
+# Fires once for every label added to a PR, including the ones added by the
+# labeler workflow when the PR is opened. Only the base branch is checked out,
+# so the PR cannot change the map or the script.
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  assign:
+    runs-on: ubuntu-24.04
+    name: Assign reviewers for label
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: |
+            .github/label-reviewers.yml
+            .github/scripts/label_reviewers.py
+          sparse-checkout-cone-mode: false
+
+      - name: Request reviews
+        env:
+          GH_TOKEN: ${{ secrets.NCS_GITHUB_TOKEN }}
+          LABEL: ${{ github.event.label.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: python3 .github/scripts/label_reviewers.py --map .github/label-reviewers.yml

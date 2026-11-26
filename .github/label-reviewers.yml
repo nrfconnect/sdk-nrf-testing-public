@@ -1,0 +1,7 @@
+# Map of PR label -> reviewers to request when that label is added.
+#
+# Entries of the form "org/team-slug" are GitHub teams, anything else is a
+# GitHub user login. Used by .github/workflows/label-reviewers.yml.
+
+manifest-trusted-firmware-m:
+  - andu-nordic
