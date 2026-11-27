@@ -7,7 +7,7 @@ PSA Key Attributes generator script
    :local:
    :depth: 2
 
-This Python script generates Platform Security Architecture (PSA) key attribute binary blobs and creates JSON files for key provisioning with `nRF Util`_.
+This Python script generates Platform Security Architecture (PSA) key attribute binary blobs and test creates JSON files for key provisioning with `nRF Util`_.
 
 .. note::
    The script is primarily used for Key Management Unit (KMU) provisioning on nRF54L Series devices and nRF54H20.
