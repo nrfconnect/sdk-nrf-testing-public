@@ -4,4 +4,4 @@
 # GitHub user login. Used by .github/workflows/label-reviewers.yml.
 
 manifest-trusted-firmware-m:
-  - avalanche-pwn
+  - greg-fer
